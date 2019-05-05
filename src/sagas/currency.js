@@ -42,6 +42,6 @@ export default function* currencyFlow() {
     } catch (error) {
       yield put(currencyError(error));
     }
-    yield delay(3000000); // обновление котировок каждые 30 секунд
+    yield delay(30000); // обновление котировок каждые 30 секунд
   }
 }
