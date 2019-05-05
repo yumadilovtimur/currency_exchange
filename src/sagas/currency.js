@@ -1,12 +1,20 @@
 import { put, call, take, delay } from 'redux-saga/effects';
 import {
+  currencyRequest,
   currencySuccess,
   currencyError,
   CURRENCY_REQUEST
 } from '../actions/currency';
+import currencies from '../currencies';
+
+const getCodes = () => {
+  const codesArray = currencies.map(item => item.code);
+  codesArray.splice(codesArray.findIndex(item => item === 'EUR'), 1);
+  return codesArray.join(',');
+};
 
 const getData = () => {
-  return fetch('https://api.exchangeratesapi.io/latest', {
+  return fetch(`/api.exchangeratesapi.io/latest?symbols=${getCodes()}`, {
     method: 'GET',
     headers: {
       'Access-Control-Allow-Credentials': true,
@@ -23,49 +31,17 @@ const getData = () => {
     .catch(error => ({ error }));
 };
 
-const loadTemperature = currencyXml => {
-  const real = currencyXml.querySelectorAll('TEMPERATURE');
-  const perceived = currencyXml.querySelectorAll('HEAT');
-  const phenomena = currencyXml.querySelectorAll('PHENOMENA');
-
-  const result = {};
-
-  const addData = (nodes, data, attr) => {
-    [...nodes].forEach(item => {
-      const value = item.getAttribute(attr);
-      const hour = `${item.parentNode.getAttribute('hour')}:00`;
-      result[hour] = {
-        ...result[hour],
-        [data]: value
-      };
-    });
-  };
-
-  addData(real, 'realTemperature', 'max');
-  addData(perceived, 'perceivedTemperature', 'max');
-  addData(phenomena, 'cloudiness', 'cloudiness');
-
-  return result;
-};
-
-const buildChart = tempData => {
-  const timeKeys = Object.keys(tempData);
-  const realTemp = timeKeys.map(key => tempData[key].realTemperature);
-  const perceivedTemp = timeKeys.map(key => tempData[key].perceivedTemperature);
-};
-
 export default function* currencyFlow() {
-  while (true)
+  yield take(CURRENCY_REQUEST);
+  while (true) {
+    yield put(currencyRequest());
     try {
-      yield take(CURRENCY_REQUEST);
-      yield delay(1500);
+      yield delay(2500); // задержка для прелоадера
       const data = yield call(getData);
-      console.log(data);
-      const temp = yield call(loadTemperature, data.response);
-      console.log(temp);
-      yield put(currencySuccess(temp));
-      yield call(buildChart, temp);
+      yield put(currencySuccess(data.response.rates));
     } catch (error) {
       yield put(currencyError(error));
     }
+    yield delay(3000000); // обновление котировок каждые 30 секунд
+  }
 }

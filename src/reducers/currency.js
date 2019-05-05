@@ -1,78 +1,40 @@
 import {
   CURRENCY_REQUEST,
   CURRENCY_SUCCESS,
-  CURRENCY_ERROR
+  CURRENCY_ERROR,
+  CURRENCY_EXCHANGE
 } from '../actions/currency';
-
-import EURlogo from '../assets/flags/EUR.jpg';
-import GBPlogo from '../assets/flags/GBP.png';
-import USDlogo from '../assets/flags/USD.jpg';
-import CHFlogo from '../assets/flags/CHF.png';
-import JPYlogo from '../assets/flags/JPY.png';
-import RUBlogo from '../assets/flags/RUB.png';
-
-const currencies = [
-  {
-    code: 'EUR',
-    name: 'Евро',
-    mark: '€',
-    logotype: EURlogo,
-    rate: null,
-    balance:
-      localStorage.getItem('EUR') || localStorage.setItem('EUR', '100') || 100
-  },
-  {
-    code: 'GBP',
-    name: 'Фунт стрелингов',
-    mark: '£',
-    logotype: GBPlogo,
-    rate: null,
-    balance:
-      localStorage.getItem('GBP') || localStorage.setItem('GBP', '100') || 100
-  },
-  {
-    code: 'USD',
-    name: 'Доллар',
-    mark: '$',
-    logotype: USDlogo,
-    rate: null,
-    balance:
-      localStorage.getItem('USD') || localStorage.setItem('USD', '100') || 100
-  },
-  {
-    code: 'CHF',
-    name: 'Франк',
-    mark: '₣',
-    logotype: CHFlogo,
-    rate: null,
-    balance:
-      localStorage.getItem('CHF') || localStorage.setItem('CHF', '100') || 100
-  },
-  {
-    code: 'JPY',
-    name: 'Иена',
-    mark: '¥',
-    logotype: JPYlogo,
-    rate: null,
-    balance:
-      localStorage.getItem('JPY') || localStorage.setItem('JPY', '100') || 100
-  },
-  {
-    code: 'RUB',
-    name: 'Рубль',
-    mark: '₽',
-    logotype: RUBlogo,
-    rate: null,
-    balance:
-      localStorage.getItem('RUB') || localStorage.setItem('RUB', '100') || 100
-  }
-];
+import currencies from '../currencies';
 
 const initialState = {
   isFetching: false,
   isFetched: false,
   error: null,
   currencies: currencies
+};
+
+const getRates = data => {
+  const newData = [...currencies].map(item => {
+    if (item.code === 'EUR') {
+      item.rate = 1;
+    } else {
+      item.rate = data[item.code];
+    }
+    return item;
+  });
+
+  return newData;
+};
+
+const exchange = (data, stateCurrencies) => {
+  return stateCurrencies.map(item => {
+    if (item.code === data.sold.code) {
+      item.balance = data.sold.newBalance;
+    } else if (item.code === data.purchased.code) {
+      item.balance = data.purchased.newBalance;
+    }
+    return item;
+  });
 };
 
 const currency = (state = initialState, action) => {
@@ -90,7 +52,7 @@ const currency = (state = initialState, action) => {
         isFetching: false,
         isFetched: true,
         error: null,
-        currencies: action.payload
+        currencies: getRates(action.payload)
       };
     case CURRENCY_ERROR:
       return {
@@ -99,6 +61,11 @@ const currency = (state = initialState, action) => {
         isFetched: true,
         error: action.payload,
         currencies: null
+      };
+    case CURRENCY_EXCHANGE:
+      return {
+        ...state,
+        currencies: exchange(action.payload, state.currencies)
       };
     default:
       return state;
